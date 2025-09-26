@@ -1,3 +1,4 @@
 #folders
-__pycache__/*
-Kew_Data/*
+__pycache__/
+Kew_Data/
+Input_Data/

@@ -19,7 +19,8 @@ class kew_tree:
 
         for genus in genera_list:
             genus_df = self.kew_data[self.kew_data['genus'] == genus]
-            species_list = genus_df['specificepithet'].unique().tolist()
+            species_list = genus_df['scientfiicname'].apply(lambda x: " ".join(x.split()[1:]))
+            species_list = species_list.unique().tolist()
 
             species_tree = BKTree()
             for species in species_list:
@@ -54,19 +55,19 @@ class kew_tree:
 
         matched_species = sortOutput(matched_species)
         matched_species = matched_species[0][0]  # Take the closest match
-        return matched_genus, matched_species
+        return matched_genus + " " + matched_species
     
     def getAcceptedName(self, name):
-        if type(name) != str:
-            name = " ".join(name).capitalize()
+        name = name.capitalize().strip()
         row = self.kew_data[self.kew_data['scientfiicname'] == name]
+        print(row)
         if not row.empty:
             accepted_id = row.iloc[0]['acceptednameusageid']
 
             accepted_row = self.kew_data[self.kew_data['taxonid'] == accepted_id].iloc[0]
             return accepted_row['scientfiicname'], accepted_row['scientfiicnameauthorship']
 
-        return None
+        return None, None
 
 
 def sortOutput(list):
