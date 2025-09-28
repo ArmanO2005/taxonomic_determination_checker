@@ -1,5 +1,7 @@
 import pandas as pd
 from BK_Tree import BKTree
+import pickle, pathlib
+from yourlib import build_heavy_obj
 
 
 class kew_tree:
@@ -40,27 +42,26 @@ class kew_tree:
             raise FileNotFoundError("No matching genus found. Adjust the error distance or check the spelling.")
 
         matched_genus = sortOutput(matched_genus)
-        matched_genus = matched_genus[0][0]  # Take the closest match
+        matched_genus = matched_genus[0][0]
 
         try:
             species = " ".join(formatted_binomial.split()[1:])
         except:
-            return matched_genus, None
+            return matched_genus
 
         species_tree = self.mapper_dict[matched_genus]
         matched_species = species_tree.search(species, error_dist_species)
         if not matched_species:
-            return matched_genus, None
+            return matched_genus
         
 
         matched_species = sortOutput(matched_species)
-        matched_species = matched_species[0][0]  # Take the closest match
+        matched_species = matched_species[0][0]
         return matched_genus + " " + matched_species
     
     def getAcceptedName(self, name):
         name = name.capitalize().strip()
         row = self.kew_data[self.kew_data['scientfiicname'] == name]
-        print(row)
         if not row.empty:
             accepted_id = row.iloc[0]['acceptednameusageid']
 
@@ -68,6 +69,14 @@ class kew_tree:
             return accepted_row['scientfiicname'], accepted_row['scientfiicnameauthorship']
 
         return None, None
+    
+    def save_tree(self):
+        with open("built_object/kew_tree.pkl", 'wb') as f:
+            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def open_tree(self):
+        with open("built_object/kew_tree.pkl", 'rb') as f:
+            return pickle.load(f)
 
 
 def sortOutput(list):
