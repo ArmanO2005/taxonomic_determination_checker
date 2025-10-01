@@ -1,7 +1,6 @@
 import pandas as pd
 from BK_Tree import BKTree
-import pickle, pathlib
-from yourlib import build_heavy_obj
+import pickle
 
 
 class kew_tree:
@@ -64,19 +63,20 @@ class kew_tree:
         row = self.kew_data[self.kew_data['scientfiicname'] == name]
         if not row.empty:
             accepted_id = row.iloc[0]['acceptednameusageid']
+            checked_synonym = row.iloc[0]["scientfiicname"]
 
             accepted_row = self.kew_data[self.kew_data['taxonid'] == accepted_id].iloc[0]
-            return accepted_row['scientfiicname'], accepted_row['scientfiicnameauthorship']
+            return checked_synonym, accepted_row['scientfiicname'], accepted_row['scientfiicnameauthorship']
 
-        return None, None
+        return None, None, None
     
-    def save_tree(self):
-        with open("built_object/kew_tree.pkl", 'wb') as f:
-            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+    # def save_tree(self):
+    #     with open("built_object/kew_tree.pkl", 'wb') as f:
+    #         pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def open_tree(self):
-        with open("built_object/kew_tree.pkl", 'rb') as f:
-            return pickle.load(f)
+    # def open_tree(self):
+    #     with open("built_object/kew_tree.pkl", 'rb') as f:
+    #         return pickle.load(f)
 
 
 def sortOutput(list):

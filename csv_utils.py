@@ -21,9 +21,9 @@ def update_determinations(path_to_csv, tree, genus_error_dist=3, species_error_d
 
     df['checked_name'] = df['***no_author'].apply(lambda x: try_helper(tree.query, x.strip().lower(), genus_error_dist, species_error_dist))
 
-    df[['accepted_name', 'author']] = df['checked_name'].apply(lambda x: pd.Series(try_helper_acc(tree.getAcceptedName, x) if x else (None, None)))
+    df[['checked_synonym', 'accepted_name', 'author']] = df['checked_name'].apply(lambda x: pd.Series(try_helper_acc(tree.getAcceptedName, x) if x else (None, None, None)))
 
-    df = df.drop(columns=['binomial_match', 'additions_match', '***no_author'])
+    df = df.drop(columns=['binomial_match', 'additions_match', '***no_author', "checked_name"])
 
     df.to_csv('output.csv', index=False)
 
@@ -83,4 +83,4 @@ def try_helper_acc(fxn, *args):
     try:
         return fxn(*args)
     except:
-        return None, None
+        return None, None, None
