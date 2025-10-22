@@ -3,7 +3,7 @@ import re
 import string
 from kew_loader_utils import *
 
-def update_determinations(path_to_csv, tree, genus_error_dist=3, species_error_dist=3):
+def update_determinations(path_to_csv, tree, genus_error_dist=3, species_error_dist=3, early_termination=False):
     """
     this function takes the file path to a CSV with one column 
 
@@ -19,7 +19,7 @@ def update_determinations(path_to_csv, tree, genus_error_dist=3, species_error_d
 
     df = TaxonNoAuthor(df, 'name')
 
-    df['checked_name'] = df['***no_author'].apply(lambda x: try_helper(tree.query, x.strip().lower(), genus_error_dist, species_error_dist))
+    df['checked_name'] = df['***no_author'].apply(lambda x: try_helper(tree.query, early_termination, x.strip().lower(), genus_error_dist, species_error_dist) if x else None)
 
     df[['checked_synonym', 'accepted_name', 'author']] = df['checked_name'].apply(lambda x: pd.Series(try_helper_acc(tree.getAcceptedName, x) if x else (None, None, None)))
 
@@ -73,9 +73,9 @@ def TaxonNoAuthor(data, columnName):
 
     return data
 
-def try_helper(fxn, *args):
+def try_helper(fxn, et, *args):
     try:
-        return fxn(*args)
+        return fxn(*args, early_termination=et)
     except:
         return None
     
