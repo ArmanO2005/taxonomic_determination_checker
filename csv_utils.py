@@ -3,7 +3,7 @@ import re
 import string
 from kew_loader_utils import *
 
-def update_determinations(path_to_csv, tree, genus_error_dist=3, species_error_dist=3, early_termination=False):
+def update_determinations(df, tree, genus_error_dist=3, species_error_dist=3, early_termination=False):
     """
     this function takes the file path to a CSV with one column 
 
@@ -15,13 +15,13 @@ def update_determinations(path_to_csv, tree, genus_error_dist=3, species_error_d
     the accepted names from kew if the spell checked name is a synonym,
     and the author
     """
-    df = pd.read_csv(path_to_csv)
 
+    df = df.reset_index(drop=True)
     df = TaxonNoAuthor(df, 'name')
 
-    df['checked_name'] = df['***no_author'].apply(lambda x: try_helper(tree.query, early_termination, x.strip().lower(), genus_error_dist, species_error_dist) if x else None)
+    df['checked_name'] = df['***no_author'].apply(lambda x: tree.query(x.strip().lower(), genus_error_dist, species_error_dist, early_termination=early_termination) if x else None)
 
-    df[['checked_synonym', 'accepted_name', 'author']] = df['checked_name'].apply(lambda x: pd.Series(try_helper_acc(tree.getAcceptedName, x) if x else (None, None, None)))
+    df[['checked_synonym', 'accepted_name', 'author', 'family']] = df['checked_name'].apply(lambda x: pd.Series(tree.getAcceptedName(x)) if x else pd.Series((None, None, None, None)))
 
     df = df.drop(columns=['binomial_match', 'additions_match', '***no_author', "checked_name"])
 
@@ -73,14 +73,3 @@ def TaxonNoAuthor(data, columnName):
 
     return data
 
-def try_helper(fxn, et, *args):
-    try:
-        return fxn(*args, early_termination=et)
-    except:
-        return None
-    
-def try_helper_acc(fxn, *args):
-    try:
-        return fxn(*args)
-    except:
-        return None, None, None

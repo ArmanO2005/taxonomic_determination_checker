@@ -3,6 +3,11 @@ from BK_Tree import BKTree
 import pickle
 import re
 import string
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class kew_tree:
     def __init__(self, kew_data_df):
@@ -21,9 +26,9 @@ class kew_tree:
         genera_list = self.kew_data['genus'].unique().tolist()
 
         if prune is not None:
-            prune = pd.DataFrame({'name': prune})
-            prune[0] = TaxonNoAuthor(prune, 'name')['***no_author']
-            prune['genus'] = prune['***no_author'].apply(lambda x: x.split()[0].lower())
+            prune = pd.DataFrame({'name': prune}).reset_index(drop=True)
+            prune = TaxonNoAuthor(prune, 'name')
+            prune['genus'] = prune["***no_author"].apply(lambda x: x.split()[0].lower())
             prune_genera = prune['genus'].unique().tolist()
             # genera_list = [genus for genus in genera_list if genus in prune_genera]
             # print(len(genera_list) / len(prune_genera))
@@ -35,12 +40,11 @@ class kew_tree:
         if prune is not None:
             checked_prune_genera = []
             for genus in prune_genera:
-                matches = self.genus_tree.search(str(genus), 2, early_termination=True)
-                matched_genus = sortOutput(matches)
-                if matched_genus:
-                    matched_genus = matched_genus[0][0]
-                    checked_prune_genera.append(matched_genus)
-                genera_list = checked_prune_genera
+                matches = self.genus_tree.search(str(genus), 2, early_termination=False)
+                if matches:
+                    matched_genus = [m[0] for m in matches]
+                    checked_prune_genera += matched_genus
+            genera_list = pd.Series(checked_prune_genera).unique().tolist()
 
         for genus in genera_list:
             genus_df = self.kew_data[self.kew_data['genus'] == genus]
@@ -62,7 +66,8 @@ class kew_tree:
 
         matched_genus = self.genus_tree.search(genus, error_dist_genus, early_termination=early_termination)
         if not matched_genus:
-            raise FileNotFoundError("No matching genus found. Adjust the error distance or check the spelling.")
+            logger.warning(f"No matching genus found for '{genus}'. Adjust the error distance or check the spelling.")
+            return None
 
         matched_genus = sortOutput(matched_genus)
         matched_genus = matched_genus[0][0]
@@ -85,15 +90,37 @@ class kew_tree:
     def getAcceptedName(self, name):
         name = name.capitalize().strip()
         row = self.kew_data[self.kew_data['scientfiicname'] == name]
+        if len(row) > 1:
+            row = row[row['taxonomicstatus'] == 'accepted']
+        if row.empty:
+            logger.warning(f"Accepted name for '{name}' not found")
+            return None, None, None, None
+        
         if not row.empty:
             accepted_id = row.iloc[0]['acceptednameusageid']
             checked_synonym = row.iloc[0]["scientfiicname"]
 
             accepted_row = self.kew_data[self.kew_data['taxonid'] == accepted_id].iloc[0]
-            return checked_synonym, accepted_row['scientfiicname'], accepted_row['scientfiicnameauthorship']
 
-        return None, None, None
-    
+            if accepted_row['family']:
+                family = accepted_row['family']
+            else:
+                family = None
+
+            if accepted_row['scientfiicnameauthorship']:
+                author = accepted_row['scientfiicnameauthorship']
+            else:
+                author = None
+
+            if accepted_row['scientfiicname']:
+                accepted_name = accepted_row['scientfiicname']
+            else:
+                accepted_name = None
+
+            return checked_synonym, accepted_name, author, family
+        
+
+
     # def save_tree(self):
     #     with open("built_object/kew_tree.pkl", 'wb') as f:
     #         pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
@@ -150,6 +177,7 @@ def TaxonNoAuthor(data, columnName):
     data["***no_author"] = data["binomial_match"] + data["additions_match"].apply(lambda x : ' ' + ' '.join(x))
     data["***no_author"] = data["***no_author"].apply(lambda x: str(x).translate(string.punctuation))
     data["***no_author"] = data["***no_author"].apply(lambda x: strip_sp(x).replace('  ', ' ').strip())
-    
+
     return data
+
 
