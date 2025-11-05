@@ -91,16 +91,25 @@ class kew_tree:
         name = name.capitalize().strip()
         row = self.kew_data[self.kew_data['scientfiicname'] == name]
         if len(row) > 1:
-            row = row[row['taxonomicstatus'] == 'accepted']
+            if row['taxonomicstatus'].str.contains('Accepted').any():
+                row = row[row['taxonomicstatus'] == 'Accepted']
+            elif row['taxonomicstatus'].str.contains('Synonym').any():
+                row = row[row['taxonomicstatus'] == 'Synonym']
+            else:
+                row = row.iloc[[0]]
         if row.empty:
-            logger.warning(f"Accepted name for '{name}' not found")
+            logger.warning(f"Unexpected error: '{name}' not found in Kew data")
             return None, None, None, None
         
         if not row.empty:
             accepted_id = row.iloc[0]['acceptednameusageid']
             checked_synonym = row.iloc[0]["scientfiicname"]
 
-            accepted_row = self.kew_data[self.kew_data['taxonid'] == accepted_id].iloc[0]
+            try:
+                accepted_row = self.kew_data[self.kew_data['taxonid'] == accepted_id].iloc[0]
+            except IndexError:
+                logger.warning(f"Accepted name for '{name}' not found")
+                return None, None, None, None
 
             if accepted_row['family']:
                 family = accepted_row['family']
